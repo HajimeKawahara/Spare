@@ -202,6 +202,33 @@ class random_generator:
             g.append(gzero)
         return np.array(d), np.array(g)
 
+    def make_colordata(self, I_true, width_max):
+
+        d=[]
+        g=[]
+
+        deltaa = 2+np.random.rand(self.N_data)*width_max
+        deltaa = deltaa.astype(np.int64) #width of beams       
+        ixrand = np.random.rand(self.N_data)*self.Nx
+        ixrand = ixrand.astype(np.int64) # x-position of beams       
+        iyrand = np.random.rand(self.N_data)*self.Ny  # y-position of beams
+        iyrand = iyrand.astype(np.int64) 
+
+        for i in range(self.N_data):
+            ix=ixrand[i]
+            iy=iyrand[i]
+            delta=deltaa[i]
+            ix1=max(ix-delta,0)
+            ix2=min(self.Nx,ix+delta)
+            iy1=max(iy-delta,0)
+            iy2=min(self.Ny,iy+delta)
+            val=np.sum(I_true[ix1:ix2,iy1:iy2,:],axis=(0,1))
+            d.append(val)
+            gzero=np.zeros((self.Nx,self.Ny),dtype="float")
+            gzero[ix1:ix2,iy1:iy2]=1.0
+            g.append(gzero)
+        return np.array(d), np.array(g)
+    
 
 ### 
 class CVPlotter(object):
