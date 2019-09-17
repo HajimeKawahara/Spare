@@ -33,6 +33,18 @@ def TSV(mat):
 
 ## Calculation of d_TSV
 def d_TSV(mat):
+    
+    dif_c = 2*np.diff(mat,axis=1)
+    dif_1 = np.pad(dif_c, [(0,0),(1,0)], mode = 'constant')
+    dif_2 = np.pad(-dif_c, [(0,0),(0,1)], mode = 'constant')
+    dif_c= 2*np.diff(mat,axis=0)
+    dif_3 = np.pad(dif_c, [(1,0),(0,0)], mode = 'constant')
+    dif_4 = np.pad(-dif_c, [(0,1),(0,0)], mode = 'constant')
+
+    return dif_1 + dif_2 + dif_3 + dif_4
+                            
+
+def d_TSVold(mat):
     Nx, Ny = np.shape(mat)
     d_TSV_mat = np.zeros(np.shape(mat))
     mat_1 = np.roll(mat, shift = 1, axis = 1)
