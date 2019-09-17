@@ -15,9 +15,10 @@ def func_x(x, y):
 
 ## A (n_data, n_xd)
 
-## Calculation of TSV
-def TSV(nmat):
-    mat=cp.asarray(nmat)
+
+
+## Calculation of TSV (cupy)
+def TSV(mat):
     # TSV terms from left to right 
     dif_c = cp.diff(mat,axis=1)
     sum_tsv1 = cp.sum(dif_c*dif_c)
@@ -27,11 +28,10 @@ def TSV(nmat):
     sum_tsv2 = cp.sum(dif_c*dif_c)
     
     #Return all TSV terms
-    return cp.asnumpy(sum_tsv1+sum_tsv2)
+    return sum_tsv1+sum_tsv2
 
 ## Calculation of d_TSV
-def d_TSV(nmat):
-    mat=cp.asarray(nmat)
+def d_TSV(mat):
     dif_c = 2*cp.diff(mat,axis=1)
     dif_1 = cp.pad(dif_c, [(0,0),(1,0)], mode = 'constant')
     dif_2 = cp.pad(-dif_c, [(0,0),(0,1)], mode = 'constant')
@@ -39,42 +39,24 @@ def d_TSV(nmat):
     dif_3 = cp.pad(dif_c, [(1,0),(0,0)], mode = 'constant')
     dif_4 = cp.pad(-dif_c, [(0,1),(0,0)], mode = 'constant')
 
-    return cp.asnumpy(dif_1 + dif_2 + dif_3 + dif_4)
+    return dif_1 + dif_2 + dif_3 + dif_4
                             
 
-def d_TSVold(mat):
-    Nx, Ny = np.shape(mat)
-    d_TSV_mat = np.zeros(np.shape(mat))
-    mat_1 = np.roll(mat, shift = 1, axis = 1)
-    mat_2 = np.roll(mat, shift = -1, axis = 1)
-    mat_3 = np.roll(mat, shift = 1, axis = 0)
-    mat_4 = np.roll(mat, shift = -1, axis = 0)
-    dif_1 = 2 * (mat[:,1:Ny] - mat_1[:,1:Ny])
-    dif_1 = np.pad(dif_1, [(0,0),(1,0)], mode = 'constant')
-    dif_2 = 2 * (mat[:,0:Ny-1] - mat_2[:,0:Ny-1])
-    dif_2 = np.pad(dif_2, [(0,0),(0,1)], mode = 'constant')
-    dif_3 = 2 * (mat[1:Nx, :] - mat_3[1:Nx, :])
-    dif_3 = np.pad(dif_3, [(1,0),(0,0)], mode = 'constant')
-    dif_4 = 2 * (mat[0:Nx-1, :] - mat_4[0:Nx-1, :])
-    dif_4 = np.pad(dif_4, [(0,1),(0,0)], mode = 'constant')
-
-    return dif_1 + dif_2 + dif_3 + dif_4
-
-## Cauculation of ||y-Ax||^2 + TSV
+## Cauculation of ||y-Ax||^2 + TSV (cupy)
 
 def F_TSV(data, A,  x_d, lambda_tsv):
-    data_dif = data -  cp.asnumpy(cp.einsum("ijk,jk->i", cp.asarray(A), cp.asarray(x_d)))
-    return (np.dot(data_dif, data_dif)/2)  + TSV(x_d) *  lambda_tsv
+    data_dif = data -  cp.einsum("ijk,jk->i", A, x_d)
+    return (cp.dot(data_dif, data_dif)/2)  + TSV(x_d)*lambda_tsv
 
 def F_obs(data, A,  x_d):
-    data_dif = data -  cp.asnumpy(cp.einsum("ijk,jk->i", cp.asarray(A),cp.asarray(x_d)))
+    data_dif = data -  cp.einsum("ijk,jk->i",A,x_d)
     return (np.dot(data_dif, data_dif)/2)
 
 # Derivative of ||y-Ax||^2 + TSV (F_TSV)
 ##  np.dot(A.T, data_dif) is n_image vecgtor, d_TSV(x_d) is the n_image vecgtor or matrix
 def dF_dx(data, A, x_d, lambda_tsv):
-    data_dif = -(data - cp.asnumpy(cp.einsum("ijk,jk->i", cp.asarray(A), cp.asarray(x_d))))
-    return cp.asnumpy(cp.einsum("ijk,i->jk", cp.asarray(A), cp.asarray(data_dif))) +lambda_tsv*  d_TSV(x_d)
+    data_dif = -(data - cp.einsum("ijk,jk->i", A, x_d))
+    return cp.einsum("ijk,i->jk", A, data_dif) +lambda_tsv*d_TSV(x_d)
 
 ## Calculation of Q(x, y) (or Q(P_L(y), y)) except for g(P_L(y))
 ## x_d2 = PL(y) (xvec1)
@@ -82,13 +64,13 @@ def dF_dx(data, A, x_d, lambda_tsv):
 
 def calc_Q_part(data, A,  x_d2, x_d, df_dx, L, lambda_tsv):
     Q_core = F_TSV(data, A, x_d, lambda_tsv) ## f(y) 
-    Q_core += np.sum((x_d2 - x_d)*df_dx) + 0.5 * L * np.sum( (x_d2 - x_d) * (x_d2 - x_d))
+    Q_core += cp.sum((x_d2 - x_d)*df_dx) + 0.5 * L * cp.sum( (x_d2 - x_d) * (x_d2 - x_d))
     return Q_core
 
 ## Calculation of soft_thresholding (prox)
 #   nx, ny = np.shape(x_d)
 def soft_threshold_nonneg(x_d, eta):
-    vec = np.zeros(np.shape(x_d))
+    vec = cp.zeros(x_d.shape)
     mask=x_d>eta
     vec[mask]=x_d[mask] - eta
     return vec
@@ -99,9 +81,14 @@ def soft_threshold_nonneg(x_d, eta):
 
 
 ## Function for MFISTA
-def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4, eta=1.1, maxiter= 10000, max_iter2=100, 
+def mfista_func(np_I_init, np_d, np_A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4, eta=1.1, maxiter= 10000, max_iter2=100, 
                     miniter = 100, TD = 30, eps = 1e-5, print_func = False):
-
+    p0=time.time()
+    #convert to cupy
+    I_init = cp.asarray(np_I_init)
+    d = cp.asarray(np_d)
+    A_ten = cp.asarray(np_A_ten)
+    
     ## Initialization
     mu, mu_new = 1, 1
     y = I_init
@@ -111,9 +98,9 @@ def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4,
     
     ## The initial cost function
     cost_first = F_TSV(d, A_ten, I_init, lambda_tsv)
-    cost_first += lambda_l1 * np.sum(I_init)
+    cost_first += lambda_l1 * cp.sum(cp.abs(I_init))
     cost_temp, cost_prev = cost_first, cost_first
-
+    print(time.time()-p0,"sec")
     ## Main Loop until iter_now < maxiter
     ## PL_(y) & y are updated in each iteration
     p1=0.
@@ -145,7 +132,7 @@ def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4,
         s3=time.time()
 
         mu_new = (1+np.sqrt(1+4*mu*mu))/2
-        F_now += lambda_l1 * np.sum(y_now)
+        F_now += lambda_l1 * cp.sum(cp.abs(y_now))
         if print_func:
             if iter_now % 50 == 0:
                 print ("Current iteration: %d/%d,  L: %f, cost: %f, cost_chiquare:%f" % (iter_now, maxiter, L, cost_temp, F_obs(d, A_ten, y_now)))
@@ -166,7 +153,7 @@ def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4,
             y = tmpa2 * x_k + tmpa * x_prev       
             x_prev = x_k
             
-        if(iter_now>miniter) and np.abs(cost_arr[iter_now-TD]-cost_arr[iter_now])<cost_arr[iter_now]*eps:
+        if(iter_now>miniter) and cp.abs(cost_arr[iter_now-TD]-cost_arr[iter_now])<cost_arr[iter_now]*eps:
             break
 
         mu = mu_new
@@ -175,7 +162,7 @@ def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4,
         p2+=s3-s2
         p3+=s4-s3
     print(p1,p2,p3,"SEC in total")
-    return y
+    return cp.asnumpy(y)
 
 
 
@@ -336,7 +323,7 @@ class main_sparse:
         
     def cost_evaluate(self, I_now, lambda_l1, lambda_tsv):
 
-        return F_obs(self.d, self.A, I_now), lambda_tsv * TSV(I_now), lambda_l1 * np.sum(I_now)
+        return F_obs(self.d, self.A, I_now), lambda_tsv * TSV(I_now), lambda_l1 * np.sum(np.abs(I_now))
     
 
     def make_random_index(self, n_fold):

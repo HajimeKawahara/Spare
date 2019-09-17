@@ -12,22 +12,28 @@ import itertools
 img=rpng.get_img("./car.png")
 
 fig=plt.figure()
-timg=img[::2,::2,:]
+timg=img[:,:,:]
 plt.imshow(timg)
 plt.savefig("carcar.png")
 
 Nx, Ny, Nc = np.shape(timg)
-N_data = 300
+N_data = 1000
 rand_now = cumodule.random_generator(N_data, Nx, Ny)
 dRGB, g=rand_now.make_colordata(timg,80) 
+
+meanlc=np.mean(dRGB)
+noise=np.random.normal(0,meanlc*0.01,np.shape(dRGB))
+dRGB+=dRGB+noise
+
 g=np.array(g)
 
+print("start optimization...")
 I_init=np.ones((Nx,Ny))
-yR = mfista_func(I_init, dRGB[:,0], g, lambda_l1= 1e-6, lambda_tsv= 1e-3)
+yR = mfista_func(I_init, dRGB[:,0], g, lambda_l1= 1e-4, lambda_tsv= 1e-1)
 I_init=np.ones((Nx,Ny))
-yG = mfista_func(I_init, dRGB[:,1], g, lambda_l1= 1e-6, lambda_tsv= 1e-3)
+yG = mfista_func(I_init, dRGB[:,1], g, lambda_l1= 1e-4, lambda_tsv= 1e-1)
 I_init=np.ones((Nx,Ny))
-yB = mfista_func(I_init, dRGB[:,2], g, lambda_l1= 1e-6, lambda_tsv= 1e-3)
+yB = mfista_func(I_init, dRGB[:,2], g, lambda_l1= 1e-4, lambda_tsv= 1e-1)
 y=np.array([yR.T,yG.T,yB.T]).T
 
 plt.imshow(y)
@@ -58,6 +64,9 @@ xy = colour.XYZ_to_xy(XYZ)
 print(np.shape(yi),np.shape(xy[:,0]),np.shape(xy[:,1]))
 ax=fig.add_subplot(122,aspect=1.0)
 
+print("MEAN,MEDIAN,MIN,MAX")
+print(np.mean(yi),np.median(yi),np.max(yi),np.min(yi))
+yi=yi/2.0
 yim=np.copy(yi)
 yim[yim>1.0]=1.0
 yim[yim<0.0]=0.0

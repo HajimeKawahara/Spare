@@ -113,7 +113,7 @@ def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4,
     
     ## The initial cost function
     cost_first = F_TSV(d, A_ten, I_init, lambda_tsv)
-    cost_first += lambda_l1 * np.sum(I_init)
+    cost_first += lambda_l1 * np.sum(np.abs(I_init))
     cost_temp, cost_prev = cost_first, cost_first
 
     ## Main Loop until iter_now < maxiter
@@ -147,7 +147,7 @@ def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4,
         s3=time.time()
 
         mu_new = (1+np.sqrt(1+4*mu*mu))/2
-        F_now += lambda_l1 * np.sum(y_now)
+        F_now += lambda_l1 * np.sum(np.abs(y_now))
         if print_func:
             if iter_now % 50 == 0:
                 print ("Current iteration: %d/%d,  L: %f, cost: %f, cost_chiquare:%f" % (iter_now, maxiter, L, cost_temp, F_obs(d, A_ten, y_now)))
@@ -338,7 +338,7 @@ class main_sparse:
         
     def cost_evaluate(self, I_now, lambda_l1, lambda_tsv):
 
-        return F_obs(self.d, self.A, I_now), lambda_tsv * TSV(I_now), lambda_l1 * np.sum(I_now)
+        return F_obs(self.d, self.A, I_now), lambda_tsv * TSV(I_now), lambda_l1 * np.sum(np.abs(I_now))
     
 
     def make_random_index(self, n_fold):
