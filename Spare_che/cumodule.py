@@ -75,6 +75,103 @@ def soft_threshold_nonneg(x_d, eta):
     vec[mask]=x_d[mask] - eta
     return vec
 
+
+def soft_threshold_grouplasso(x_d, eta):
+    norm=cp.linalg.norm(x_d,axis=0)
+    vec=(1.0-eta/norm)*x_d
+    #max
+    mask=vec<0.0
+    vec[mask]=0.0
+
+    return vec
+
+
+
+## Function for MFISTA
+def mfista_grouplasso(np_I_init, np_d, np_A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4, eta=1.1, maxiter= 10000, max_iter2=100, 
+                    miniter = 100, TD = 30, eps = 1e-5, print_func = False):
+    p0=time.time()
+    #convert to cupy
+    I_init = cp.asarray(np_I_init)
+    d = cp.asarray(np_d)
+    A_ten = cp.asarray(np_A_ten)
+    
+    ## Initialization
+    mu, mu_new = 1, 1
+    y = I_init
+    x_prev = I_init
+    cost_arr = []
+    L = L_init
+    
+    ## The initial cost function
+    cost_first = F_TSV(d, A_ten, I_init, lambda_tsv)
+    cost_first += lambda_l1 * cp.sum(cp.abs(I_init))
+    cost_temp, cost_prev = cost_first, cost_first
+    print(time.time()-p0,"sec")
+    ## Main Loop until iter_now < maxiter
+    ## PL_(y) & y are updated in each iteration
+    p1=0.
+    p2=0.
+    p3=0.
+    for iter_now in range(maxiter):
+        s1=time.time()
+        cost_arr.append(cost_temp)
+        
+        ##df_dx(y)
+        df_dx_now = dF_dx(d,A_ten, y, lambda_tsv) 
+        
+        ## Loop to estimate Lifshitz constant (L)
+        ## L is the upper limit of df_dx_now
+        s2=time.time()
+
+        for iter_now2 in range(max_iter2):
+            
+            y_now = soft_threshold_grouplasso(y - (1/L) * df_dx_now, lambda_l1/L)
+            Q_now = calc_Q_part(d, A_ten, y_now, y, df_dx_now, L,  lambda_tsv)
+            F_now = F_TSV(d, A_ten, y_now,lambda_tsv)
+            
+            ## If y_now gives better value, break the loop
+            if F_now <Q_now:
+                break
+            L = L*eta
+
+        L = L/eta
+        s3=time.time()
+
+        mu_new = (1+np.sqrt(1+4*mu*mu))/2
+        F_now += lambda_l1 * cp.sum(cp.abs(y_now))
+        if print_func:
+            if iter_now % 50 == 0:
+                print ("Current iteration: %d/%d,  L: %f, cost: %f, cost_chiquare:%f" % (iter_now, maxiter, L, cost_temp, F_obs(d, A_ten, y_now)))
+
+        ## Updating y & x_k
+        if F_now < cost_prev:
+            cost_temp = F_now
+            tmpa = (1-mu)/mu_new
+            x_k = soft_threshold_grouplasso(y - (1/L) * df_dx_now, lambda_l1/L)
+            y = x_k + ((mu-1)/mu_new) * (x_k - x_prev) 
+            x_prev = x_k
+            
+        else:
+            cost_temp = F_now
+            tmpa = 1-(mu/mu_new)
+            tmpa2 =(mu/mu_new)
+            x_k = soft_threshold_grouplasso(y - (1/L) * df_dx_now, lambda_l1/L)
+            y = tmpa2 * x_k + tmpa * x_prev       
+            x_prev = x_k
+            
+        if(iter_now>miniter) and cp.abs(cost_arr[iter_now-TD]-cost_arr[iter_now])<cost_arr[iter_now]*eps:
+            break
+
+        mu = mu_new
+        s4=time.time()
+        p1+=s2-s1
+        p2+=s3-s2
+        p3+=s4-s3
+    print(p1,p2,p3,"SEC in total")
+    return cp.asnumpy(y)
+
+
 ### For consistnecy with sparse modleing (Shiro Ikeda)
 ## box_flag=0 &&& cl_flag = 1
 ## nonnegative = 1
