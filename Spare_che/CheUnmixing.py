@@ -23,7 +23,7 @@ dRGB, g=rand_now.make_colordata(timg,10)
 
 meanlc=np.mean(dRGB)
 noise=np.random.normal(0,meanlc*0.01,np.shape(dRGB))
-dRGB+=dRGB+noise
+dRGB+=noise
 
 g=np.array(g)
 

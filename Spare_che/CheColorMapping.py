@@ -23,7 +23,7 @@ dRGB, g=rand_now.make_colordata(timg,80)
 
 meanlc=np.mean(dRGB)
 noise=np.random.normal(0,meanlc*0.01,np.shape(dRGB))
-dRGB+=dRGB+noise
+dRGB+=noise
 
 g=np.array(g)
 
@@ -66,7 +66,6 @@ ax=fig.add_subplot(122,aspect=1.0)
 
 print("MEAN,MEDIAN,MIN,MAX")
 print(np.mean(yi),np.median(yi),np.max(yi),np.min(yi))
-yi=yi/2.0
 yim=np.copy(yi)
 yim[yim>1.0]=1.0
 yim[yim<0.0]=0.0
