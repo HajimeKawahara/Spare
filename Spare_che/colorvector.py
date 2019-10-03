@@ -19,23 +19,23 @@ def color_weight_function(w,nside=16):
     
     return
 
-import matplotlib.pyplot as plt
-rgb=generate_palette(16)
-print(np.shape(rgb))
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    rgb=generate_palette(16)
+    print(np.shape(rgb))
+    
+    fig=plt.figure()
+    ax=fig.add_subplot(121)
+    ax.plot(rgb[:,0],rgb[:,1],".")
+    
+    XYZ = colour.sRGB_to_XYZ(rgb)
+    xy = colour.XYZ_to_xy(XYZ)    
+    ax=fig.add_subplot(122,aspect=1.0)
+    
 
-fig=plt.figure()
-ax=fig.add_subplot(121)
-ax.plot(rgb[:,0],rgb[:,1],".")
-
-
-XYZ = colour.sRGB_to_XYZ(rgb)
-xy = colour.XYZ_to_xy(XYZ)
-
-ax=fig.add_subplot(122,aspect=1.0)
-
-
-ax.scatter(xy[:,0], xy[:,1],facecolor=rgb,alpha=1,s=2)
-ax.set_xlim(0.15,0.62)
-ax.set_ylim(0.2,0.62)
-ax.set_title("reconstruct")
-plt.show()
+    ax.scatter(xy[:,0], xy[:,1],facecolor=rgb,alpha=1,s=2)
+    ax.set_xlim(0.15,0.62)
+    ax.set_ylim(0.2,0.62)
+    ax.set_title("reconstruct")
+    plt.show()
+    

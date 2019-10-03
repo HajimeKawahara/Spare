@@ -1,4 +1,5 @@
-
+import numpy as np
+import time
 # Derivative of ||y-Ax||^2 
 ##  np.dot(A.T, data_dif) is n_image vecgtor, d_TSV(x_d) is the n_image vecgtor or matrix
 
@@ -11,12 +12,12 @@
 
 
 def dF_dx(data, A, x_d):
-    data_dif = -(data - np.einsum("iljkc,jkc->il", A, x_d))
-    return np.einsum("iljkc,il->jkc", A, data_dif)
+    data_dif = -(data - np.einsum("ijkcl,jkc->il", A, x_d))
+    return np.einsum("ijkcl,il->jkc", A, data_dif)
 
 def F_like(data, A,  x_d):
-    data_dif = data -  np.einsum("iljkc,jkc->il", A, x_d)
-    return (np.dot(data_dif, data_dif)/2) 
+    data_dif = data -  np.einsum("ijkcl,jkc->il", A, x_d)
+    return (np.einsum("il,il->",data_dif, data_dif)/2) 
 
 ### backtracking right term
 def calc_Q_part(data, A,  x_d2, x_d, df_dx, L):
@@ -32,12 +33,13 @@ def calc_Q_part(data, A,  x_d2, x_d, df_dx, L):
 def soft_threshold_glasso(x_d, eta):
     vec = np.zeros(np.shape(x_d))
     xgnorm=np.linalg.norm(x_d,axis=(0,1))
+    mask=xgnorm>eta
     vec[:,:,mask]= (1.0 - eta/xgnorm[mask])*x_d[:,:,mask]            
     return vec
 
 
 ## Function for MFISTA Group Lasso
-def mfista_func(I_init, d, A_ten, lambda_gl,L_init= 1e4, eta=1.1, maxiter= 10000, max_iter2=100):
+def mfista_func(I_init, d, A_ten, lambda_gl,L_init= 1e4, eta=1.1, maxiter= 10000, max_iter2=100, miniter = 100, TD = 30, eps = 1e-5, print_func = False):
 
     ## Initialization
     mu, mu_new = 1, 1
