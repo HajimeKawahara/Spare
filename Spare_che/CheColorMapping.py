@@ -12,14 +12,16 @@ import itertools
 img=rpng.get_img("./car.png")
 
 fig=plt.figure()
-timg=img[:,:,:]
+timg=img[::4,::4,:]
 plt.imshow(timg)
 plt.savefig("carcar.png")
 
 Nx, Ny, Nc = np.shape(timg)
 N_data = 1000
 rand_now = cumodule.random_generator(N_data, Nx, Ny)
-dRGB, g=rand_now.make_colordata(timg,80) 
+dRGB, g=rand_now.make_colordata(timg,20) 
+
+print(np.shape(g)) # i, jx,jy
 
 meanlc=np.mean(dRGB)
 noise=np.random.normal(0,meanlc*0.01,np.shape(dRGB))

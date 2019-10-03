@@ -82,6 +82,8 @@ def dF_dx(data, A, x_d, lambda_tsv):
 ## x_d2 = PL(y) (xvec1)
 ## x_d = y (xvec2)
 
+
+### backtracking right term
 def calc_Q_part(data, A,  x_d2, x_d, df_dx, L, lambda_tsv):
     Q_core = F_TSV(data, A, x_d, lambda_tsv) ## f(y) 
     Q_core += np.sum((x_d2 - x_d)*df_dx) + 0.5 * L * np.sum( (x_d2 - x_d) * (x_d2 - x_d))
@@ -131,7 +133,7 @@ def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4,
         ## Loop to estimate Lifshitz constant (L)
         ## L is the upper limit of df_dx_now
         s2=time.time()
-
+        ## Backtracking
         for iter_now2 in range(max_iter2):
             
             y_now = soft_threshold_nonneg(y - (1/L) * df_dx_now, lambda_l1/L)
@@ -143,9 +145,10 @@ def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4,
                 break
             L = L*eta
 
-        L = L/eta
+        L = L/eta #Here we get Lifshitz constant
         s3=time.time()
 
+        #Nesterov acceleration
         mu_new = (1+np.sqrt(1+4*mu*mu))/2
         F_now += lambda_l1 * np.sum(np.abs(y_now))
         if print_func:
@@ -178,6 +181,7 @@ def mfista_func(I_init, d, A_ten, lambda_l1= 1e2, lambda_tsv= 1e-8, L_init= 1e4,
         p3+=s4-s3
     print(p1,p2,p3,"SEC in total")
     return y
+
 
 
 

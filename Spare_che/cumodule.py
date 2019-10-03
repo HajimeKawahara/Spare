@@ -48,6 +48,11 @@ def F_TSV(data, A,  x_d, lambda_tsv):
     data_dif = data -  cp.einsum("ijk,jk->i", A, x_d)
     return (cp.dot(data_dif, data_dif)/2)  + TSV(x_d)*lambda_tsv
 
+def cF_TSV(data, A,  x_d, lambda_tsv):
+    data_dif = data -  cp.einsum("ilxyk,xyk->il", A, x_d)
+    return (cp.dot(data_dif, data_dif)/2)  + TSV(x_d)*lambda_tsv
+
+
 def F_obs(data, A,  x_d):
     data_dif = data -  cp.einsum("ijk,jk->i",A,x_d)
     return (np.dot(data_dif, data_dif)/2)

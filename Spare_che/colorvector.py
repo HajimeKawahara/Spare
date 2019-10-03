@@ -1,22 +1,41 @@
 import numpy as np
 import colour 
+import healpy as hp
+def generate_palette(nside=16):
+    rgb=[]
+    #    for ipix in range(0,hp.nside2npix(nside)):
+    npix=hp.nside2npix(nside)
+    theta,phi=hp.pix2ang(nside,range(0,npix))
+    rgb=np.cos(phi)*np.sin(theta),np.sin(phi)*np.sin(theta),np.cos(theta)
 
-def generate_palette(Npal):
-
-    a=np.linspace(0.01,0.99,Npal)
-    aa,bb=np.meshgrid(a,a)
-    xy=np.array([aa.flatten(),bb.flatten()]).T
-    
-    vec=colour.xy_to_XYZ(xy)    
-    vec=(vec.T/np.linalg.norm(vec,axis=1)).T
-    illuminant_XYZ = np.array([0.34570, 0.35850])
-    illuminant_RGB = np.array([0.31270, 0.32900])
-    chromatic_adaptation_transform = 'Bradford'
-    XYZ_to_RGB_matrix = np.array([[3.24062548, -1.53720797, -0.49862860],[-0.96893071, 1.87575606, 0.04151752],[0.05571012, -0.20402105, 1.05699594]])
-    rgb=colour.XYZ_to_RGB(z, illuminant_XYZ, illuminant_RGB, XYZ_to_RGB_matrix,chromatic_adaptation_transform)
-    
-    return rgb
+    rgb=np.array(rgb).T
+    mask=(np.min(rgb,axis=1)>0.0)
+    return rgb[mask,:]
     
 
-def color_weight_function():
+def color_weight_function(w,nside=16):
+    rgb=generate_palette(nside)
+    Mk,Nl=np.shape(rgb)
+    
     return
+
+import matplotlib.pyplot as plt
+rgb=generate_palette(16)
+print(np.shape(rgb))
+
+fig=plt.figure()
+ax=fig.add_subplot(121)
+ax.plot(rgb[:,0],rgb[:,1],".")
+
+
+XYZ = colour.sRGB_to_XYZ(rgb)
+xy = colour.XYZ_to_xy(XYZ)
+
+ax=fig.add_subplot(122,aspect=1.0)
+
+
+ax.scatter(xy[:,0], xy[:,1],facecolor=rgb,alpha=1,s=2)
+ax.set_xlim(0.15,0.62)
+ax.set_ylim(0.2,0.62)
+ax.set_title("reconstruct")
+plt.show()
