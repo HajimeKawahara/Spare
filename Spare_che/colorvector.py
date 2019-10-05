@@ -1,6 +1,13 @@
 import numpy as np
 import colour 
 import healpy as hp
+
+def convimg2rgb(ti):
+    XYZ = colour.sRGB_to_XYZ(ti)
+    xy = colour.XYZ_to_xy(XYZ)
+    return xy,ti
+
+
 def generate_palette(nside=16):
     rgb=[]
     #    for ipix in range(0,hp.nside2npix(nside)):
